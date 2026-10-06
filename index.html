@@ -1,113 +1,103 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>青年部支部会議 資料確認</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資料確認</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 720px; margin: auto; padding: 16px; background: #f8f9fa; color: #333; }
-    .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    button { padding: 14px 20px; border: 0; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .primary { background: #06C755; color: #fff; }
-    .progress { height: 18px; background: #eee; border-radius: 10px; overflow: hidden; margin-top: 8px; }
-    .bar { height: 100%; width: 0%; background: #06C755; transition: width 0.3s ease; }
-    .small { color: #666; font-size: 13px; }
-    #pdf-container { height: 450px; overflow-y: scroll; border: 1px solid #ccc; border-radius: 8px; background: #525659; padding: 10px; }
-    canvas { display: block; margin: 0 auto 10px auto; max-width: 100%; height: auto; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 20px;
+      background-color: #f6f7f9;
+      color: #333;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    h2 {
+      font-size: 1.2rem;
+      margin-top: 0;
+    }
+    .pdf-container {
+      margin: 15px 0;
+      width: 100%;
+      height: 400px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background-color: #06C755;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #message {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
-  <h1>青年部支部会議 資料確認</h1>
-
-  <div class="card">
-    <h2>閲覧者情報</h2>
-    <p>LINEアカウント: <strong id="user-name">取得中...</strong></p>
+<div class="card">
+  <h2>会議資料の確認</h2>
+  <p id="user-info">ユーザー情報を取得中...</p>
+  
+  <div class="pdf-container">
+    <iframe src="sample.pdf"></iframe>
   </div>
 
-  <div class="card">
-    <h3>資料--議題1--</h3>
-    <p class="small">※最下部までスクロールすると確認ボタンが有効化されます。</p>
-    <div id="pdf-container"></div>
-  </div>
-
-  <div class="card">
-    <button id="confirm-btn" class="primary" onclick="confirmMaterial()" disabled>資料を最後まで読み進めてください</button>
-    <p id="message" style="margin-top:8px; font-size:14px;"></p>
-  </div>
-
-  <div class="card">
-    <h3>確認状況</h3>
-    <p><strong><span id="count">0</span> / 15人</strong> 確認済み</p>
-    <div class="progress"><div class="bar" id="bar"></div></div>
-    <p id="next" style="margin-top:8px; font-weight:bold;"></p>
-  </div>
+  <button id="confirm-btn" class="btn" onclick="confirmMaterial()" disabled>確認しました</button>
+  <p id="message"></p>
+</div>
 
 <script>
-  const LIFF_ID = "2011902298-VpFK8frU";
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzRa17YjPp6bFVG-Eb0UCC4UZ4rBUUeplZsgNf0Y6zpxiE0GiaKMw3OJiIgsKREIYwCgw/exec";
-  const PDF_URL = "sample.pdf";
-  const AGENDA_NAME = "議題1";
+  // ★ご自身の環境に合わせて設定してください★
+  const LIFF_ID = "2007050017-ZJd5180g"; 
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyfD0-jH6_WjB8m7wE_aE9jJ4d91N4e402kX/exec"; // GASのWebアプリURL
+  const AGENDA_NAME = "第1回 役員会資料";
 
   let userName = "";
-  let isReachedEnd = false;
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-  window.onload = async function() {
-    await initLiff();
-    loadPDF();
-  };
-
-  async function initLiff() {
+  async function main() {
     try {
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) {
         liff.login();
-      } else {
-        const profile = await liff.getProfile();
-        userName = profile.displayName;
-        document.getElementById("user-name").textContent = userName;
+        return;
       }
+      const profile = await liff.getProfile();
+      userName = profile.displayName;
+      document.getElementById("user-info").textContent = `ログイン中: ${userName} 様`;
+      document.getElementById("confirm-btn").disabled = false;
     } catch (err) {
-      document.getElementById("user-name").textContent = "ゲスト--取得失敗--";
-      userName = "ゲストユーザー";
-    }
-  }
-
-  async function loadPDF() {
-    const container = document.getElementById('pdf-container');
-    try {
-      const loadingTask = pdfjsLib.getDocument(PDF_URL);
-      const pdf = await loadingTask.promise;
-
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 1.5 });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        const renderContext = { canvasContext: context, viewport: viewport };
-        await page.render(renderContext).promise;
-        container.appendChild(canvas);
-      }
-
-      container.addEventListener('scroll', () => {
-        if (isReachedEnd) return;
-        if (container.scrollTop + container.clientHeight >= container.scrollHeight - 50) {
-          isReachedEnd = true;
-          const btn = document.getElementById("confirm-btn");
-          btn.disabled = false;
-          btn.textContent = "資料を最後まで確認しました";
-        }
-      });
-    } catch (e) {
-      container.innerHTML = "<p style='color:white;'>PDFの読み込みに失敗しました。</p>";
+      console.error(err);
+      document.getElementById("user-info").textContent = "ユーザー情報の取得に失敗しました。";
     }
   }
 
@@ -127,33 +117,26 @@
     };
 
     try {
-      const response = await fetch(GAS_WEB_APP_URL, {
+      // no-cors モードで GAS へ送信（CORSエラーを回避）
+      await fetch(GAS_WEB_APP_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
       });
       
-      const res = await response.json();
-      if (res.status === "success") {
-        document.getElementById("message").textContent = "確認状況を記録しました。";
-        renderStatus(res.data);
-      } else {
-        document.getElementById("message").textContent = "エラーが発生しました: " + res.message;
-        btn.disabled = false;
-      }
+      // 送信成功時の表示更新
+      document.getElementById("message").textContent = "確認状況を記録しました。";
+      btn.textContent = "確認済み";
+      
     } catch (err) {
       document.getElementById("message").textContent = "通信エラーが発生しました。";
       btn.disabled = false;
     }
   }
 
-  function renderStatus(data) {
-    document.getElementById("count").textContent = data.count;
-    document.getElementById("bar").style.width = Math.min((data.count / data.total) * 100, 100) + "%";
-    document.getElementById("next").textContent = data.ready
-      ? "12人以上確認済み：次の議題へ進めます。"
-      : "現在は確認中です。12人以上の確認で次へ進めます。";
-  }
+  main();
 </script>
+
 </body>
 </html>
